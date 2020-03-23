@@ -1,0 +1,5 @@
+"STARTUP.obj",
+"test1.obj",
+"GSM.obj",
+"RC522.obj" 
+TO "test1" 

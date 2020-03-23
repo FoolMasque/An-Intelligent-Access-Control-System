@@ -1,0 +1,269 @@
+C51 COMPILER V9.01   TEST1                                                                 05/15/2019 23:33:27 PAGE 1   
+
+
+C51 COMPILER V9.01, COMPILATION OF MODULE TEST1
+OBJECT MODULE PLACED IN test1.OBJ
+COMPILER INVOKED BY: D:\KEIL\C51\BIN\C51.EXE test1.c BROWSE DEBUG OBJECTEXTEND
+
+line level    source
+
+   1          /************************************************************
+   2                  
+   3                  ³ÌÐòËµÃ÷£º
+   4                  ¹¦ÄÜ£ºTEXT(GSM)Ä£Ê½ÏÂ·¢ËÍÓ¢ÎÄ¶ÌÏûÏ¢£¬¶ÌÏûÏ¢Ö±½ÓÏÔÊ¾ÔÚÖÕ¶Ë
+   5                  Ê×ÏÈÒªÈ·¶¨Ä£¿éÒÑ¾­×¢²áµ½ÍøÂç
+   6                  È»ºóÕýÈ·µÄÓ²¼þÁ¬½Ó   P3.0-----STXD»òÕß5VT   P3.1-----SRXD»òÕß5VR   GND---GND£¨Ö»Òª±£Ö¤¹«µØ¼´¿É£¬Ã»±ØÒªµ¥¶
+             -À½ÓÒ»´Î£©
+   7                  È»ºóÈ·ÈÏÄãµ¥Æ¬»úÉÏµÄ¾§Õñ£¬¸ù¾Ý¾§ÕñÐÞ¸Ä×Ô¼ºµÄ³ÌÐò¡£
+   8                  ÍÆ¼öÏÈ½«µ¥Æ¬»úÓëµçÄÔÏàÁ¬£¬È·¶¨µ¥Æ¬»ú·¢ËÍµÄÊý¾ÝÊÇÕýÈ·µÄ¡£Èç¹û·¢ËÍµÄÊÇÂÒÂë£¬Çë¼ì²é¾§ÕñÓëµ¥Æ¬»úµÄ´®¿Ú²¨ÌØÂÊ¡
+             -£
+   9                  Èç¹ûÍ¨¹ýÒÔÉÏ¼¸Ìõ»¹½â¾ö²»ÁËÎÊÌâ£¬Çë¿´Èº¹²ÏíÎÄ¼þ AN0004 ¡£
+  10          
+  11          *************************************************************/
+  12          #include <REG52.H>
+  13          #include <GSM.h>
+  14          #include <string.h>
+  15          #include <main.h>
+  16          #include <MFRC522.h>
+  17          #define u8 unsigned char
+  18          #define u16 unsigned int
+  19          
+  20          sbit MOTOR_DRIVER0 = P1^0;
+  21          sbit MOTOR_DRIVER1 = P1^1;
+  22          sbit SPK = P1^2;
+  23          unsigned int  rec_data_len_uart=0;    //±ê¼ÇBuffer_Uart0½ÓÊÕÊý×é
+  24          unsigned char xdata Buffer_Uart0_Rec[100]={0};           //Uart0ÖÐ¶Ï½ÓÊÕÊý×é                                                                                    
+  25          unsigned char code DefaultKey[6] = {0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF};
+  26          unsigned char g_ucTempbuf[20];
+  27          unsigned char ID_DATA[]="LMJY-";  //IDµØÖ· 
+  28          
+  29          u8 xdata system_ok[]="SYSTEM OK!";
+  30          u8 xdata open_MSG[]="The door is opened";
+  31          u8 xdata close_MSG[]="Door closed!";
+  32          u8 xdata open_MSG1[]=":Come in!";
+  33          void clear_rec_data()
+  34          {
+  35   1              u8 i,temp_len;
+  36   1              temp_len=strlen(Buffer_Uart0_Rec);
+  37   1              if(temp_len>100)
+  38   1              {
+  39   2                      temp_len=100;
+  40   2              }
+  41   1              for(i=0;i<temp_len;i++)
+  42   1              {
+  43   2                      Buffer_Uart0_Rec[i]='\0';       
+  44   2              }
+  45   1              rec_data_len_uart=0;
+  46   1      }
+  47          
+  48          /*´®ÐÐÍ¨Ñ¶ÖÐ¶Ï£¬ÊÕ·¢Íê³É½«½øÈë¸ÃÖÐ¶Ï*/
+  49          void Serial_interrupt() interrupt 4 
+  50          {
+  51   1              unsigned char temp_rec_data_uart0;      
+  52   1              temp_rec_data_uart0 = SBUF;//¶ÁÈ¡½ÓÊÕÊý¾Ý               
+  53   1              RI=0;//½ÓÊÕÖÐ¶ÏÐÅºÅÇåÁã£¬±íÊ¾½«¼ÌÐø½ÓÊÕ                 
+C51 COMPILER V9.01   TEST1                                                                 05/15/2019 23:33:27 PAGE 2   
+
+  54   1              Buffer_Uart0_Rec[rec_data_len_uart]=temp_rec_data_uart0;        //½ÓÊÕÊý¾Ý
+  55   1              rec_data_len_uart++;
+  56   1              if(rec_data_len_uart>100)
+  57   1              {
+  58   2                      rec_data_len_uart=0;    //´ÓÍ·¿ªÊ¼½ÓÊÕÊý¾Ý
+  59   2              }       
+  60   1      } 
+  61          void System_Init()
+  62          {
+  63   1       u8 i=0;
+  64   1       DelaySec(5);
+  65   1       Uart1Sends("ATE0\r\n");
+  66   1       DelaySec(1);
+  67   1       Uart1Sends("AT+CMGF=1\r\n");
+  68   1       DelaySec(1);
+  69   1       Uart1Sends("AT+CSCS=\"GSM\"\r\n");
+  70   1       DelaySec(1);
+  71   1       Uart1Sends("AT+CNMI=2,2,0,0,0\r\n");
+  72   1       DelaySec(1);
+  73   1       clear_rec_data();
+  74   1       LcdWriteCom(0x83);
+  75   1       while(system_ok[i]!='\0')
+  76   1       {
+  77   2        LcdWriteData(system_ok[i]);
+  78   2        Lcd1602_Delay1ms(5);
+  79   2        i++;
+  80   2       }
+  81   1      }
+  82          
+  83          void Delay(unsigned int time)//ÑÓÊ±º¯Êý
+  84          {
+  85   1        unsigned int i,k  ;
+  86   1        for(i=0;i<255;i++)
+  87   1          for(k=0;k<time;k++)
+  88   1            _nop_();    
+  89   1      }
+  90          
+  91          void main()
+  92          {
+  93   1              u8 x = 0;
+  94   1              unsigned char status;
+  95   1              LcdInit();
+  96   1              SerialInti();
+  97   1              System_Init();
+  98   1              PcdReset();
+  99   1          PcdAntennaOff(); //¹Ø±ÕÌìÏß
+ 100   1          PcdAntennaOn();  //¿ªÆôÌìÏß
+ 101   1              while(1)
+ 102   1              {
+ 103   2               status = PcdRequest(PICC_REQALL, g_ucTempbuf); //Ñ°¿¨
+ 104   2           if (status == MI_OK)//ÓÐ¿¨
+ 105   2           {                           
+ 106   3                               //´Ë´¦¿É¼Ó·äÃùÆ÷³ÌÐò
+ 107   3                // TYPE_DATA[0]=g_ucTempbuf[0];
+ 108   3                // TYPE_DATA[1]=g_ucTempbuf[1];
+ 109   3                 status = PcdAnticoll(g_ucTempbuf);       //·À³å×² £¬·µ»Ø¿¨Æ¬IDºÅ 4×Ö½Ú
+ 110   3                 if (status == MI_OK)
+ 111   3                 { 
+ 112   4                       status = PcdSelect(g_ucTempbuf);    //Ñ¡¶¨¿¨Æ¬  ,ÊäÈë¿¨Æ¬IDºÅ
+ 113   4                       if (status == MI_OK)
+ 114   4                       { 
+ 115   5                        //ID_DATA[0]=g_ucTempbuf[0];
+C51 COMPILER V9.01   TEST1                                                                 05/15/2019 23:33:27 PAGE 3   
+
+ 116   5                       // ID_DATA[1]=g_ucTempbuf[1];
+ 117   5                       // ID_DATA[2]=g_ucTempbuf[2];
+ 118   5                       // ID_DATA[3]=g_ucTempbuf[3];
+ 119   5      
+ 120   5                        status = PcdAuthState(PICC_AUTHENT1A, 1, DefaultKey, g_ucTempbuf);//PICC_AUTHENT1A ÑéÖ¤ÃÜÂëÄ£Ê½60AÃÜÂë
+             - 61BÃÜÂë£¬¡°1¡±¿éµØÖ·£¬DefaultKey³õÊ¼ÃÜÂë£¬g_ucTempbuf IDºÅ
+ 121   5                    if (status == MI_OK) //ÑéÖ¤ÃÜÂë
+ 122   5                    {                                                                                                                                                                                                                                                                                                                                                                                   
+ 123   6                  status = PcdRead(1, g_ucTempbuf);//¶Á¿éµØÖ·¡°1¡±µÄÊý¾Ý£¬·µ»ØÖµ´æÔÚ  g_ucTempbuf
+ 124   6                          if (status == MI_OK)
+ 125   6                              { 
+ 126   7                           //value_DATA[0]=g_ucTempbuf[0];
+ 127   7                               //value_DATA[1]=g_ucTempbuf[1];
+ 128   7                               //value_DATA[2]=g_ucTempbuf[2];
+ 129   7                               //value_DATA[3]=g_ucTempbuf[3];        
+ 130   7                   //                  b=value_DATA[3];
+ 131   7                               
+ 132   7                               if(strstr(g_ucTempbuf+8,"00000000")!=NULL)
+ 133   7                               {
+ 134   8                                x=(g_ucTempbuf[4]-0x30)*100+(g_ucTempbuf[5]-0x30)*10+(g_ucTempbuf[6]-0x30);
+ 135   8                                if(x>=100)
+ 136   8                                {
+ 137   9                                 ID_DATA[5]=g_ucTempbuf[4];
+ 138   9                                 ID_DATA[6]=g_ucTempbuf[5];
+ 139   9                                 ID_DATA[7]=g_ucTempbuf[6];
+ 140   9                                }
+ 141   8                                if(x>=10&&x<100)
+ 142   8                                {
+ 143   9                                 ID_DATA[5]=g_ucTempbuf[5];
+ 144   9                                 ID_DATA[6]=g_ucTempbuf[6];
+ 145   9                                }
+ 146   8                                if(x<10)
+ 147   8                                {
+ 148   9                                 ID_DATA[5]=g_ucTempbuf[6];
+ 149   9                                 x=0;
+ 150   9                                 while(ID_DATA[x]!='\0')
+ 151   9                                 {
+ 152  10                                      if(x>5)
+ 153  10                                      ID_DATA[x]='\0';
+ 154  10                                      x++;
+ 155  10                                 }
+ 156   9                                } 
+ 157   8                                x=0;
+ 158   8                                LcdWriteCom(0x80+0x40);
+ 159   8                    while(ID_DATA[x]!='\0')
+ 160   8                    {
+ 161   9                     LcdWriteData(ID_DATA[x]);
+ 162   9                     Lcd1602_Delay1ms(5);
+ 163   9                     x++;
+ 164   9                    }
+ 165   8                                x=0;
+ 166   8                                MOTOR_DRIVER0 = 1;
+ 167   8                            MOTOR_DRIVER1 = 0;
+ 168   8                            DelaySec(2);
+ 169   8                            MOTOR_DRIVER0 = 1;
+ 170   8                            MOTOR_DRIVER1 = 1;
+ 171   8                                while(open_MSG1[x]!='\0')
+ 172   8                                {
+ 173   9                                 LcdWriteData(open_MSG1[x]);
+ 174   9                     Lcd1602_Delay1ms(5);
+ 175   9                     x++;
+ 176   9                                }
+C51 COMPILER V9.01   TEST1                                                                 05/15/2019 23:33:27 PAGE 4   
+
+ 177   8                                x=0;
+ 178   8                                Uart1Sends("AT+CMGS=\"15108911893\"\r\n");//´Ë´¦ÐÞ¸ÄÎª¶Ô·½µÄµç»°ºÅ
+ 179   8                    DelaySec(1);//ÑÓÊ±3Ãë
+ 180   8                    Uart1Sends(ID_DATA);//ÐÞ¸Ä¶ÌÐÅÄÚÈÝ,¶ÌÐÅÄÚÈÝ¿ÉÎªÓ¢ÎÄºÍÊý×Ö
+ 181   8                    Uart1Send(0x1a);
+ 182   8                                clear_rec_data();
+ 183   8                                DelaySec(4);
+ 184   8                                LcdWriteCom(0x01);
+ 185   8                                LcdWriteCom(0x83);
+ 186   8                    while(system_ok[x]!='\0')
+ 187   8                    {
+ 188   9                     LcdWriteData(system_ok[x]);
+ 189   9                     Lcd1602_Delay1ms(5);
+ 190   9                     x++;
+ 191   9                    }
+ 192   8                                x=0;
+ 193   8                               }                                                                                                                                   
+ 194   7                              }   
+ 195   6                }
+ 196   5                       }        
+ 197   4                      }
+ 198   3               }  
+ 199   2               if(strstr(Buffer_Uart0_Rec,"15108911893")!=NULL)
+ 200   2               {
+ 201   3                      DelaySec(1);
+ 202   3                      //Uart1Sends("Received");
+ 203   3                      //Lcd1602_Delay1ms(10);
+ 204   3              //      Uart1Sends(Buffer_Uart0_Rec);
+ 205   3                  MOTOR_DRIVER0 = 1;
+ 206   3                      MOTOR_DRIVER1 = 0;
+ 207   3                      DelaySec(5);
+ 208   3                      clear_rec_data();
+ 209   3                      MOTOR_DRIVER0 = 1;
+ 210   3                      MOTOR_DRIVER1 = 1;
+ 211   3                      LcdWriteCom(0x80+0x40);
+ 212   3              while(open_MSG[x]!='\0')
+ 213   3              {
+ 214   4               LcdWriteData(open_MSG[x]);
+ 215   4               Lcd1602_Delay1ms(5);
+ 216   4               x++;
+ 217   4              }
+ 218   3                      x=0;
+ 219   3                      DelaySec(2);
+ 220   3                      LcdWriteCom(0x01);
+ 221   3                      LcdWriteCom(0x80+0x42);
+ 222   3              while(close_MSG[x]!='\0')
+ 223   3              {
+ 224   4               LcdWriteData(close_MSG[x]);
+ 225   4               Lcd1602_Delay1ms(5);
+ 226   4               x++;
+ 227   4              }
+ 228   3                      x=0;
+ 229   3              //      Uart1Sends("ok");
+ 230   3               }                                                
+ 231   2               //Lcd1602_Delay1ms(50);
+ 232   2              }
+ 233   1      
+ 234   1      
+ 235   1      }
+
+
+MODULE INFORMATION:   STATIC OVERLAYABLE
+C51 COMPILER V9.01   TEST1                                                                 05/15/2019 23:33:27 PAGE 5   
+
+   CODE SIZE        =    768    ----
+   CONSTANT SIZE    =    106    ----
+   XDATA SIZE       =    153    ----
+   PDATA SIZE       =   ----    ----
+   DATA SIZE        =     28       2
+   IDATA SIZE       =   ----    ----
+   BIT SIZE         =   ----    ----
+END OF MODULE INFORMATION.
+
+
+C51 COMPILATION COMPLETE.  0 WARNING(S),  0 ERROR(S)
